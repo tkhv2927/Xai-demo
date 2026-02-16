@@ -33,11 +33,16 @@ st.divider()
 st.sidebar.header("🕹️ TRAFFIC GENERATOR")
 mode = st.sidebar.radio("Select Mode:", ["Scenario Simulation", "Manual Packet Injection"])
 
+# Initialize variables to avoid errors
+p_size = 64
+protocol = "TCP"
+duration = 0.5
+scenario = "Manual"
+
 if mode == "Scenario Simulation":
     scenario = st.sidebar.selectbox("Choose Attack Scenario:", 
         ["Normal Traffic", "DDoS Volumetric", "SQL Injection Payload"])
     
-    # Set default values based on scenario
     if scenario == "Normal Traffic":
         p_size = 64
         protocol = "TCP"
@@ -57,7 +62,6 @@ else: # Manual Mode
     p_size = st.sidebar.slider("Packet Size (bytes)", 0, 2000, 64)
     protocol = st.sidebar.selectbox("Protocol", ["TCP", "UDP", "HTTP", "ICMP"])
     duration = st.sidebar.slider("Flow Duration (ms)", 0.0, 5.0, 0.5)
-    scenario = "Manual"
 
 # --- MAIN ANIMATION BUTTON ---
 if st.button("🚀 INITIATE SCAN"):
@@ -65,41 +69,73 @@ if st.button("🚀 INITIATE SCAN"):
     # 1. SCANNING ANIMATION
     with st.status("📡 INTERCEPTING NETWORK TRAFFIC...", expanded=True) as status:
         st.write(">> CAPTURING PACKET HEADERS...")
-        time.sleep(0.8)
+        time.sleep(0.5)
         st.write(">> NORMALIZING FEATURE VECTORS...")
-        time.sleep(0.8)
-        st.write(">> DEEP LEARNING MODEL INFERENCE...")
-        time.sleep(0.8)
+        time.sleep(0.5)
         status.update(label="✅ PACKET INTERCEPTED", state="complete", expanded=False)
 
-    # 2. LOGIC ENGINE (Simulated AI)
-    # Rules to mimic AI decision making
-    risk_score = 0.1 # Default safe
+    # 2. LOGIC ENGINE (UPDATED FOR SENSITIVITY)
+    # This logic now reacts dynamically to sliders
+    risk_score = 0.1 # Base safe score
     reasons = {}
+
+    # Logic: High Packet Size always increases risk
+    if p_size > 800:
+        risk_score += 0.4
+        reasons["Packet Size"] = 0.8
+    else:
+        reasons["Packet Size"] = -0.2
+
+    # Logic: UDP and ICMP are suspicious
+    if protocol == "UDP":
+        risk_score += 0.3
+        reasons["Protocol (UDP)"] = 0.5
+    elif protocol == "ICMP":
+        risk_score += 0.2
+        reasons["Protocol (ICMP)"] = 0.3
+    else:
+        reasons["Protocol"] = -0.1
+
+    # Logic: Very short duration (burst) increases risk
+    if duration < 0.2 and p_size > 500:
+        risk_score += 0.2
+        reasons["Flow Duration"] = 0.6
     
-    if p_size > 1000 and protocol == "UDP":
-        risk_score = 0.95
-        verdict = "MALICIOUS (DDoS)"
-        reasons = {"Packet Size": 0.8, "Protocol (UDP)": 0.6, "Duration": 0.4}
-        color = "red"
-    elif protocol == "HTTP" and (scenario == "SQL Injection Payload" or p_size == 450):
-        risk_score = 0.88
-        verdict = "MALICIOUS (SQL Injection)"
+    # Logic: SQL Injection Scenario override
+    if scenario == "SQL Injection Payload" or (protocol == "HTTP" and p_size == 450):
+        risk_score = 0.92
         reasons = {"Payload Syntax": 0.9, "Packet Size": 0.2, "Source IP": 0.1}
+
+    # Cap risk at 0.99
+    if risk_score > 0.99: risk_score = 0.99
+
+    # Determine Verdict
+    if risk_score > 0.5:
+        verdict = "MALICIOUS (High Risk)"
         color = "red"
+        # Ensure reasons are positive for chart
+        reasons = {k: abs(v) for k, v in reasons.items() if v > 0} 
+        if not reasons: reasons = {"Unknown Anomaly": 0.5}
     else:
         verdict = "BENIGN (Safe)"
-        reasons = {"Packet Size": -0.2, "Protocol": -0.1, "Source IP": -0.1}
         color = "green"
+        reasons = {k: v for k, v in reasons.items()}
 
     # 3. DISPLAY RESULTS (The Dashboard)
     col1, col2 = st.columns([1, 1.5])
     
     with col1:
         st.subheader("1. AI DETECTION")
-        type_text(f"VERDICT: {verdict}", speed=0.05)
+        type_text(f"VERDICT: {verdict}", speed=0.02)
         
         st.write(f"**Threat Probability:** {int(risk_score*100)}%")
+        
+        # Color change for progress bar
+        if risk_score > 0.5:
+            st.markdown("""<style>.stProgress > div > div > div > div { background-color: #FF4B4B; }</style>""", unsafe_allow_html=True)
+        else:
+            st.markdown("""<style>.stProgress > div > div > div > div { background-color: #00FF41; }</style>""", unsafe_allow_html=True)
+            
         st.progress(risk_score)
         
         # Data Metrics
@@ -108,7 +144,7 @@ if st.button("🚀 INITIATE SCAN"):
 
     with col2:
         st.subheader("2. XAI EXPLANATION (SHAP)")
-        st.info("Why? The chart below shows which features triggered the AI.")
+        st.info("Feature Contribution Analysis")
         
         # Dynamic Chart
         features = list(reasons.keys())
@@ -124,7 +160,7 @@ if st.button("🚀 INITIATE SCAN"):
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
             font=dict(color='#00FF41', family="Courier New"),
-            xaxis=dict(title="Feature Impact (Red=Danger, Green=Safe)"),
+            xaxis=dict(title="Feature Impact (Red=Danger, Green=Safe)", range=[-1, 1]),
             margin=dict(l=0, r=0, t=0, b=0)
         )
         st.plotly_chart(fig, use_container_width=True)
@@ -132,11 +168,9 @@ if st.button("🚀 INITIATE SCAN"):
     # 4. FINAL NARRATIVE
     st.divider()
     if risk_score > 0.5:
-        st.error(f"❌ **SYSTEM ALERT:** This traffic was blocked mainly because **{max(reasons, key=reasons.get)}** was abnormal.")
+        st.error(f"❌ **SYSTEM ALERT:** Threat detected! Top factor: **{max(reasons, key=reasons.get)}**")
     else:
-        st.success("✅ **SYSTEM CLEAR:** Traffic patterns match normal user behavior.")
+        st.success("✅ **SYSTEM CLEAR:** Traffic patterns appear normal.")
 
 else:
     st.info("Waiting for input... Select a mode and click 'INITIATE SCAN'")
-    # Background animation placeholder
-    st.image("https://media.giphy.com/media/YQitE4YNQNahy/giphy.gif", caption="Network Monitoring Active", width=400)
