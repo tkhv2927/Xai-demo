@@ -4,87 +4,139 @@ import numpy as np
 import plotly.graph_objects as go
 import time
 
-# --- PAGE SETUP ---
-st.set_page_config(page_title="XAI-IDS Live Demo", page_icon="🛡️", layout="wide")
+# --- PAGE CONFIGURATION ---
+st.set_page_config(page_title="XAI-IDS Pro", page_icon="🛡️", layout="wide")
 
-# --- HACKER STYLE CSS ---
+# --- CUSTOM CSS FOR "CYBERPUNK" STYLE ---
 st.markdown("""
     <style>
-    .stApp { background-color: #0E1117; color: #FFFFFF; }
-    .stHeader { color: #00FF00; }
-    div.stButton > button { background-color: #00FF00; color: black; border-radius: 5px; }
+    .stApp { background-color: #050505; color: #00FF41; font-family: 'Courier New', Courier, monospace; }
+    .stButton>button { color: #000; background-color: #00FF41; border-color: #00FF41; }
+    .stProgress > div > div > div > div { background-color: #00FF41; }
     </style>
     """, unsafe_allow_html=True)
 
+# --- TYPEWRITER EFFECT FUNCTION ---
+def type_text(text, speed=0.02):
+    t = st.empty()
+    for i in range(len(text) + 1):
+        t.markdown(f"**{text[:i]}**")
+        time.sleep(speed)
+    return t
+
 # --- HEADER ---
-st.title("🛡️ XAI-IDS: Transparency Engine")
-st.markdown("### `System Status: ONLINE` | `Monitoring: UNSW-NB15 Stream`")
+st.title("🛡️ XAI-IDS: INTELLIGENT DEFENSE SYSTEM")
+st.markdown("`SYSTEM_STATUS: ONLINE` | `MODE: INTERACTIVE`")
 st.divider()
 
-# --- SIDEBAR ---
-st.sidebar.header("🕹️ Simulation Controls")
-scenario = st.sidebar.selectbox("Select Attack Scenario:", 
-    ["Normal Traffic (Safe)", "DDoS Attack (Volume)", "SQL Injection (Payload)"])
+# --- SIDEBAR: ADVANCED CONTROLS ---
+st.sidebar.header("🕹️ TRAFFIC GENERATOR")
+mode = st.sidebar.radio("Select Mode:", ["Scenario Simulation", "Manual Packet Injection"])
 
-if st.sidebar.button("🚀 Analyze Packet"):
+if mode == "Scenario Simulation":
+    scenario = st.sidebar.selectbox("Choose Attack Scenario:", 
+        ["Normal Traffic", "DDoS Volumetric", "SQL Injection Payload"])
     
-    # --- SIMULATION LOGIC ---
-    with st.spinner("Intercepting Packet... Decrypting Headers..."):
-        time.sleep(1.5) # Dramatic pause for effect
+    # Set default values based on scenario
+    if scenario == "Normal Traffic":
+        p_size = 64
+        protocol = "TCP"
+        duration = 0.5
+    elif scenario == "DDoS Volumetric":
+        p_size = 1500
+        protocol = "UDP"
+        duration = 0.1
+    else: # SQL
+        p_size = 450
+        protocol = "HTTP"
+        duration = 1.2
 
-    # COLUMNS FOR DASHBOARD
-    col1, col2 = st.columns([1, 2])
+else: # Manual Mode
+    st.sidebar.markdown("---")
+    st.sidebar.write("🔧 **Manual Override**")
+    p_size = st.sidebar.slider("Packet Size (bytes)", 0, 2000, 64)
+    protocol = st.sidebar.selectbox("Protocol", ["TCP", "UDP", "HTTP", "ICMP"])
+    duration = st.sidebar.slider("Flow Duration (ms)", 0.0, 5.0, 0.5)
+    scenario = "Manual"
 
+# --- MAIN ANIMATION BUTTON ---
+if st.button("🚀 INITIATE SCAN"):
+    
+    # 1. SCANNING ANIMATION
+    with st.status("📡 INTERCEPTING NETWORK TRAFFIC...", expanded=True) as status:
+        st.write(">> CAPTURING PACKET HEADERS...")
+        time.sleep(0.8)
+        st.write(">> NORMALIZING FEATURE VECTORS...")
+        time.sleep(0.8)
+        st.write(">> DEEP LEARNING MODEL INFERENCE...")
+        time.sleep(0.8)
+        status.update(label="✅ PACKET INTERCEPTED", state="complete", expanded=False)
+
+    # 2. LOGIC ENGINE (Simulated AI)
+    # Rules to mimic AI decision making
+    risk_score = 0.1 # Default safe
+    reasons = {}
+    
+    if p_size > 1000 and protocol == "UDP":
+        risk_score = 0.95
+        verdict = "MALICIOUS (DDoS)"
+        reasons = {"Packet Size": 0.8, "Protocol (UDP)": 0.6, "Duration": 0.4}
+        color = "red"
+    elif protocol == "HTTP" and (scenario == "SQL Injection Payload" or p_size == 450):
+        risk_score = 0.88
+        verdict = "MALICIOUS (SQL Injection)"
+        reasons = {"Payload Syntax": 0.9, "Packet Size": 0.2, "Source IP": 0.1}
+        color = "red"
+    else:
+        verdict = "BENIGN (Safe)"
+        reasons = {"Packet Size": -0.2, "Protocol": -0.1, "Source IP": -0.1}
+        color = "green"
+
+    # 3. DISPLAY RESULTS (The Dashboard)
+    col1, col2 = st.columns([1, 1.5])
+    
     with col1:
-        st.subheader("1. Detection (The Black Box)")
+        st.subheader("1. AI DETECTION")
+        type_text(f"VERDICT: {verdict}", speed=0.05)
         
-        if scenario == "Normal Traffic (Safe)":
-            risk = 0.12
-            status = "BENIGN"
-            color = "green"
-            # SHAP Values (Green = Safe)
-            shap_data = {"Packet Size": -0.4, "Source IP": -0.2, "Protocol": -0.1, "Time": 0.1}
-            reason = "Traffic patterns match authorized user behavior."
-            
-        elif scenario == "DDoS Attack (Volume)":
-            risk = 0.98
-            status = "MALICIOUS"
-            color = "red"
-            # SHAP Values (Red = Danger)
-            shap_data = {"Packet Size": 0.85, "Flow Duration": 0.78, "Protocol (UDP)": 0.45, "TTL": 0.12}
-            reason = "High Volume & Packet Size indicates Denial of Service attempt."
+        st.write(f"**Threat Probability:** {int(risk_score*100)}%")
+        st.progress(risk_score)
+        
+        # Data Metrics
+        st.metric("📦 Packet Size", f"{p_size} bytes")
+        st.metric("🌐 Protocol", protocol)
 
-        elif scenario == "SQL Injection (Payload)":
-            risk = 0.94
-            status = "MALICIOUS"
-            color = "red"
-            # SHAP Values
-            shap_data = {"Payload Content": 0.92, "Special Chars": 0.88, "Source IP": 0.20, "Time": 0.05}
-            reason = "Malicious syntax detected in payload field."
-
-        # DISPLAY BLACK BOX RESULT
-        st.markdown(f"**AI Verdict:** :{color}[{status}]")
-        st.progress(risk, text=f"Threat Probability: {int(risk*100)}%")
-    
     with col2:
-        st.subheader("2. XAI Explanation (Why?)")
-        st.info(f"📝 **Analyst Summary:** {reason}")
+        st.subheader("2. XAI EXPLANATION (SHAP)")
+        st.info("Why? The chart below shows which features triggered the AI.")
         
-        # PLOTLY CHART (THE COOL PART)
-        features = list(shap_data.keys())
-        impact = list(shap_data.values())
-        colors = ['#FF4B4B' if x > 0 else '#00FF00' for x in impact]
+        # Dynamic Chart
+        features = list(reasons.keys())
+        impact = list(reasons.values())
+        colors = ['#FF4B4B' if x > 0 else '#00FF41' for x in impact]
         
         fig = go.Figure(go.Bar(
             x=impact, y=features, orientation='h',
-            marker=dict(color=colors)
+            marker=dict(color=colors, line=dict(width=1, color='white'))
         ))
+        
         fig.update_layout(
-            title="SHAP Feature Contribution (Red = Suspicious, Green = Safe)",
-            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white')
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#00FF41', family="Courier New"),
+            xaxis=dict(title="Feature Impact (Red=Danger, Green=Safe)"),
+            margin=dict(l=0, r=0, t=0, b=0)
         )
         st.plotly_chart(fig, use_container_width=True)
 
+    # 4. FINAL NARRATIVE
+    st.divider()
+    if risk_score > 0.5:
+        st.error(f"❌ **SYSTEM ALERT:** This traffic was blocked mainly because **{max(reasons, key=reasons.get)}** was abnormal.")
+    else:
+        st.success("✅ **SYSTEM CLEAR:** Traffic patterns match normal user behavior.")
+
 else:
-    st.info("👈 Select a scenario from the sidebar and click 'Analyze Packet' to start.")
+    st.info("Waiting for input... Select a mode and click 'INITIATE SCAN'")
+    # Background animation placeholder
+    st.image("https://media.giphy.com/media/YQitE4YNQNahy/giphy.gif", caption="Network Monitoring Active", width=400)
